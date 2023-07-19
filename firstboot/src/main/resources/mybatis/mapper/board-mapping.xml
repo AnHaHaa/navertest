@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="board.spring.mybatis.BoardDAO">
+
+	<insert id="insertBoard" parameterType="boarddto">
+		<!-- seq , title, contents, writer, pw, viewcount, writetime -->
+		insert into board_ajax(title, contents, writer, pw, viewcount,
+		writetime)
+		values(#{title}, #{contents}, #{writer}, #{pw}, 0, now())
+	</insert>
+
+	<!-- ▼▼▼▼▼▼▼ -->
+	<select id="getTotalBoard2" resultType="boarddto" parameterType="board.spring.mybatis.SearchDTO">
+		select * 
+		from board_ajax 
+		<if test="keyword != null and keyword != ''">
+		where
+            <choose>
+                <!-- 검색 유형이 있을 때 -->
+                <when test="searchType != null and searchType != ''">
+                    <choose>
+                        <when test="'title'.equals( searchType )">
+                            title LIKE CONCAT('%', #{keyword}, '%')
+                        </when>
+                        <when test="'content'.equals( searchType )">
+                            contents LIKE CONCAT('%', #{keyword}, '%')
+                        </when>
+                        <when test="'writer'.equals( searchType )">
+                            writer LIKE CONCAT('%', #{keyword}, '%')
+                        </when>
+                    </choose>
+                </when>
+                
+                <!-- 전체 검색일 때 -->
+                <otherwise>
+	                title LIKE CONCAT('%', #{keyword}, '%')
+	                OR contents LIKE CONCAT('%', #{keyword}, '%')
+	                OR writer LIKE CONCAT('%', #{keyword}, '%')
+                </otherwise>
+            </choose>
+        </if>
+		order by seq
+		limit #{pagination.limitStart}, #{recordSize}
+	</select>
+	
+	<select id="getCount" resultType="int" parameterType="board.spring.mybatis.SearchDTO">
+		select count(*) 
+		from board_ajax
+		<if test="keyword != null and keyword != ''">
+		where
+            <choose>
+                <!-- 검색 유형이 있을 때 -->
+                <when test="searchType != null and searchType != ''">
+                    <choose>
+                        <when test="'title'.equals( searchType )">
+                            title LIKE CONCAT('%', #{keyword}, '%')
+                        </when>
+                        <when test="'content'.equals( searchType )">
+                            contents LIKE CONCAT('%', #{keyword}, '%')
+                        </when>
+                        <when test="'writer'.equals( searchType )">
+                            writer LIKE CONCAT('%', #{keyword}, '%')
+                        </when>
+                    </choose>
+                </when>
+                
+                <!-- 전체 검색일 때 -->
+                <otherwise>
+	                title LIKE CONCAT('%', #{keyword}, '%')
+	                OR contents LIKE CONCAT('%', #{keyword}, '%')
+	                OR writer LIKE CONCAT('%', #{keyword}, '%')
+                </otherwise>
+            </choose>
+        </if>
+	</select>
+	
+	    <!-- 게시글 검색 -->
+    <sql id="search">
+        <!-- 검색 키워드가 있을 때 -->
+        <if test="keyword != null and keyword != ''">
+            <choose>
+                <!-- 검색 유형이 있을 때 -->
+                <when test="searchType != null and searchType != ''">
+                    <choose>
+                        <when test="'title'.equals( searchType )">
+                            AND title LIKE CONCAT('%', #{keyword}, '%')
+                        </when>
+                        <when test="'content'.equals( searchType )">
+                            AND contents LIKE CONCAT('%', #{keyword}, '%')
+                        </when>
+                        <when test="'writer'.equals( searchType )">
+                            AND writer LIKE CONCAT('%', #{keyword}, '%')
+                        </when>
+                    </choose>
+                </when>
+                
+                <!-- 전체 검색일 때 -->
+                <otherwise>
+                    AND (
+                           title LIKE CONCAT('%', #{keyword}, '%')
+                        OR contents LIKE CONCAT('%', #{keyword}, '%')
+                        OR writer LIKE CONCAT('%', #{keyword}, '%')
+                    )
+                </otherwise>
+            </choose>
+        </if>
+    </sql>
+	
+	
+	<!-- ▲▲▲▲▲▲▲ -->
+
+	<select id="getTotalBoard" resultType="int">
+		select count(*) from
+		board_ajax
+	</select>
+
+	<select id="getPagingBoard" parameterType="java.util.ArrayList"
+		resultType="boarddto">
+		select * from board_ajax order by writetime desc limit
+		<foreach collection="list" item="num" separator=",">
+			#{num}
+		</foreach>
+	</select>
+
+	<select id="getOneBoard" resultType="boarddto"
+		parameterType="int">
+		select * from board_ajax where seq=#{seq}
+	</select>
+
+	<update id="updateViewCount" parameterType="int">
+		update board_ajax set
+		viewcount = viewcount+1 where seq=#{seq}
+	</update>
+
+	<delete id="deleteBoard" parameterType="int">
+		delete from board_ajax
+		where seq=#{seq}
+	</delete>
+
+	<update id="updateBoard" parameterType="boarddto">
+		update board_ajax set
+		title=#{title}, contents=#{contents}, writetime=now() where seq=#{seq}
+	</update>
+
+	<select id="searchAllList" resultType="boarddto"
+		parameterType="java.util.HashMap">
+		select * from board_ajax where title like
+		concat("%",#{searchtxt},"%") or contents like
+		concat("%",#{searchtxt},"%") or writer like
+		concat("%",#{searchtxt},"%") order by writetime desc
+	</select>
+
+	<select id="searchDetailList" resultType="boarddto"
+		parameterType="java.util.HashMap">
+		select * from board_ajax where ${search} like
+		concat("%",#{searchtxt},"%") order by writetime desc
+	</select>
+
+	<!-- #select문 내 if문처럼 사용
+	select * from board where
+	<choose>
+	<when test="colname==null"> title like #{colvalue} or contents like #{colvalue} or writer like #{colvalue} </when>
+	<otherwise> ${colname} like #{calvalue} </otherwise> 
+	</choose> order by writetime desc -->
+
+	<select id="getSearchBoard" resultType="int"  parameterType="java.util.HashMap">
+		select count(*) from board where
+		<choose>
+			<when test="search==all">
+				title like #{searchtxt} or contents like #{searchtxt} or writer like #{searchtxt}
+			</when>
+			<otherwise>
+				${search} like #{searchtxt}
+			</otherwise>
+		</choose>
+		order by writetime desc
+	</select>
+
+	<!-- join 활용 -->
+	
+	<resultMap type="board.spring.mybatis.BoardMemberDTO" id="boardwritermap">
+		<id property="seq" column="seq"/>
+		<result property="title" column="title"/>
+		<result property="contents" column="contents"/>
+		<result property="viewcount" column="viewcount"/>
+		<result property="writetime" column="writetime"/>
+		<result property="pw" column="b_pw"/>
+		<association property="member" resultMap="memberMap"/> <!-- memberdto 타입 객체를 member로 매칭 (1개의 게시물 - 1명 작성자) -->
+		<!-- <collection property="member" resultMap="memberMap"/> --> <!-- 1개의 게시물 - n명 작성자 -->
+	</resultMap>
+	
+	<resultMap type="board.spring.mybatis.MemberDTO" id="memberMap">
+		<id property="memberid" column="memberid"/>
+		<result property="name" column="name"/>
+		<result property="phone" column="phone"/>
+		<result property="email" column="email"/>
+		<result property="regtime" column="regtime"/>
+		<result property="pw" column="m_pw"/>
+	</resultMap>
+	
+	<select id="boardWriterInform" parameterType="int" resultMap="boardwritermap">
+	select seq, title, contents, memberid, name, email, phone, regtime, m.pw as m_pw, b.pw as b_pw
+	from board_ajax b inner join c_member m
+	on writer = memberid
+	where seq=#{seq}
+	</select>
+	
+	
+	
+
+</mapper>
